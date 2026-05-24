@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sebastian's Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --shane:#1a3a5c; --shane-bg:#d4e4f4;
+  --kuan:#7c2d12;  --kuan-bg:#fde8d8;
+  --neutral:#f5f2ee; --border:#e2ddd6;
+  --text:#1c1917; --muted:#78716c; --white:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--neutral);color:var(--text)}
+
+header{background:var(--white);border-bottom:1px solid var(--border);padding:12px 14px;position:sticky;top:0;z-index:100;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+header h1{font-family:'DM Serif Display',serif;font-size:1.15rem}
+header h1 span{color:var(--muted);font-style:italic;font-size:.82rem}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px;font-size:.68rem;font-weight:600}
+.li{display:flex;align-items:center;gap:4px}
+.ld{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+.tabs{display:flex;background:var(--white);border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:10px 14px;font-size:.8rem;font-weight:600;cursor:pointer;border-bottom:2.5px solid transparent;color:var(--muted);white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;transition:color .15s}
+.tab.active{color:var(--text);border-bottom-color:var(--text)}
+
+.page{display:none}.page.active{display:block}
+
+.cal-wrap{padding:12px 8px}
+.month-nav{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.month-nav h2{font-family:'DM Serif Display',serif;font-size:1.25rem;flex:1}
+.nav-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:7px;background:var(--white);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+.nav-btn:active{background:var(--neutral)}
+.month-note{background:#fef9c3;border:1px solid #ca8a04;border-radius:7px;padding:8px 11px;font-size:.68rem;color:#713f12;line-height:1.6;margin-bottom:10px;display:none}
+.month-note strong{color:#78350f}
+.month-note.visible{display:block}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-hdr{text-align:center;font-size:.6rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:4px 0}
+
+.cal-day{border-radius:7px;overflow:hidden;border:1.5px solid transparent;cursor:pointer;display:flex;flex-direction:column;min-height:90px;-webkit-tap-highlight-color:transparent}
+.cal-day:active{opacity:.82}
+.cal-day.empty{background:none!important;border:none;cursor:default}
+.cal-day.today{outline:2.5px solid var(--text)!important;outline-offset:-1px}
+
+.half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 2px;min-height:0}
+.bg-shane{background:var(--shane-bg)}.bg-kuan{background:var(--kuan-bg)}
+.bg-summer-shane{background:#c7dff5}.bg-summer-kuan{background:#fad5be}
+.bg-tbd{background:#fefce8}.col-tbd{color:#854d0e}.bdr-tbd{border-color:rgba(133,77,14,.2)}
+
+.divider-row{position:relative;height:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.divider-row .dline{position:absolute;left:0;right:0;height:1.5px;background:rgba(0,0,0,.2)}
+
+.cnum{font-size:.82rem;font-weight:700;line-height:1;margin-bottom:1px}
+.cwho{font-size:.54rem;font-weight:600;line-height:1.2;text-align:center;opacity:.9}
+.ctime{font-size:.47rem;line-height:1.2;text-align:center;opacity:.7;margin-top:1px}
+.ctime.hol-label{font-size:.56rem;font-weight:700;text-decoration:underline;opacity:.9}
+.cdog{font-size:.45rem;text-align:center;opacity:.75;margin-top:1px}
+.ctag{font-size:.43rem;text-align:center;margin-top:1px;opacity:.65;font-style:italic}
+
+.col-shane{color:var(--shane)}.col-kuan{color:var(--kuan)}
+.bdr-shane{border-color:rgba(26,58,92,.2)}.bdr-kuan{border-color:rgba(124,45,18,.2)}.bdr-split{border-color:rgba(0,0,0,.14)}
+
+/* past day strikethrough */
+.cal-day.past{position:relative}
+.cal-day.past::after{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(
+    to bottom right,
+    transparent calc(50% - 0.5px),
+    rgba(0,0,0,0.12) calc(50% - 0.5px),
+    rgba(0,0,0,0.12) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+  pointer-events:none;
+  z-index:3;
+  border-radius:6px;
+}
+
+/* detail */
+.detail-panel{margin:10px 10px 0;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:13px;display:none}
+.detail-panel.open{display:block}
+.dp-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.dp-title{font-family:'DM Serif Display',serif;font-size:.98rem;flex:1;margin-right:8px}
+.dp-close{cursor:pointer;color:var(--muted);font-size:1.1rem;line-height:1;flex-shrink:0}
+.hcard{background:#d1fae5;border:1px solid rgba(6,95,70,.25);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:.78rem;color:#064e3b;line-height:1.6}
+.hcard strong{color:#065f46}
+.mcard{background:#fef9c3;border:1px solid #ca8a04;border-radius:8px;padding:9px 12px;font-size:.7rem;color:#713f12;line-height:1.55;margin-bottom:8px}
+.dcard{background:var(--neutral);border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--muted);line-height:1.55;margin-bottom:8px}
+.dcard strong{color:var(--text)}
+
+/* log */
+.log-wrap{padding:14px}
+.log-wrap h2{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:12px}
+.log-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:9px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);font-size:.74rem}
+.log-table th{background:var(--neutral);padding:7px 9px;text-align:left;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border)}
+.log-table td{padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+.log-table tr:last-child td{border-bottom:none}
+.empty-s{text-align:center;color:var(--muted);font-size:.76rem;padding:14px;font-style:italic}
+
+/* decree */
+.dec-wrap{padding:14px;max-width:680px;margin:0 auto}
+.dec-wrap h2{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:10px}
+.dec-sub{font-size:.76rem;color:var(--muted);margin-bottom:12px;line-height:1.5}
+.dh{font-family:'DM Serif Display',serif;font-size:.92rem;margin:14px 0 6px}
+.dh:first-of-type{margin-top:0}
+.dr{background:var(--neutral);border-radius:7px;padding:7px 10px;margin-bottom:4px;color:var(--muted);font-size:.76rem;line-height:1.55}
+.dr strong{color:var(--text)}
+.dr.warn{background:#fef3c7;border:1px solid #d97706;color:#92400e}
+.dr.warn strong{color:#78350f}
+.dr.note{background:#fef9c3;border:1px solid #ca8a04;color:#713f12;font-size:.7rem}
+
+.toast{position:fixed;bottom:16px;right:14px;background:var(--text);color:var(--white);padding:10px 14px;border-radius:8px;font-size:.78rem;font-weight:500;opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999;max-width:250px;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* reimbursement */
+.reimb-wrap{padding:14px;max-width:780px;margin:0 auto}
+.reimb-wrap h2{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:6px}
+.reimb-rules{background:#fef9c3;border:1px solid #ca8a04;border-radius:8px;padding:10px 13px;font-size:.72rem;color:#713f12;line-height:1.6;margin-bottom:14px}
+.reimb-rules strong{color:#78350f}
+.reimb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:600px){.reimb-grid{grid-template-columns:1fr}}
+.reimb-form{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px}
+.reimb-form h3{font-family:'DM Serif Display',serif;font-size:.96rem;margin-bottom:12px}
+.fg{margin-bottom:9px}
+.fg label{display:block;font-size:.68rem;font-weight:700;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select,.fg textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.82rem;color:var(--text);background:var(--white);outline:none}
+.fg textarea{resize:vertical;min-height:55px}
+.fg input[type=checkbox]{width:auto;margin-right:6px}
+.check-row{display:flex;align-items:center;font-size:.8rem;color:var(--text);margin-bottom:9px}
+.sub-btn{width:100%;padding:10px;background:var(--text);color:var(--white);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;margin-top:2px}
+.sub-btn:active{opacity:.85}
+.who-row{display:flex;gap:6px;margin-bottom:9px}
+.who-btn{flex:1;padding:7px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;background:var(--white);text-align:center}
+.who-btn.sa{background:var(--shane-bg);border-color:#4a7aac;color:var(--shane)}
+.who-btn.ka{background:var(--kuan-bg);border-color:#c2622a;color:var(--kuan)}
+
+/* ledger */
+.ledger{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.ledger-head{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--neutral);border-bottom:1px solid var(--border)}
+.ledger-head h3{font-family:'DM Serif Display',serif;font-size:.94rem}
+.ledger-summary{display:flex;gap:14px;font-size:.72rem}
+.ls-item{text-align:center}
+.ls-amt{font-size:.92rem;font-weight:700}
+.ls-lbl{color:var(--muted);font-size:.64rem}
+.exp-row{padding:11px 14px;border-bottom:1px solid var(--border);font-size:.76rem}
+.exp-row:last-child{border-bottom:none}
+.exp-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.exp-title{font-weight:600;color:var(--text)}
+.exp-amt{font-weight:700;font-size:.84rem}
+.exp-meta{color:var(--muted);font-size:.68rem;margin-bottom:5px}
+.exp-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.ebadge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.64rem;font-weight:700}
+.eb-pending{background:#fef3c7;color:#d97706}
+.eb-paid{background:#dcfce7;color:#16a34a}
+.eb-disputed{background:#fee2e2;color:#dc2626}
+.eb-overdue{background:#fce7f3;color:#be185d}
+.eb-emergency{background:#fde8d8;color:#c2622a}
+.eb-agreed{background:#d4e4f4;color:#1a3a5c}
+.exp-actions{display:flex;gap:6px}
+.ea-btn{padding:4px 10px;border-radius:6px;border:1.5px solid;font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;cursor:pointer;background:var(--white)}
+.ea-pay{border-color:#16a34a;color:#16a34a}
+.ea-dispute{border-color:#dc2626;color:#dc2626}
+.ea-partial{border-color:#d97706;color:#d97706}
+.ea-btn:active{opacity:.8}
+.dispute-form{background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;padding:10px;margin-top:8px;display:none}
+.dispute-form.open{display:block}
+.deadline-bar{height:4px;border-radius:2px;background:var(--border);margin-top:6px;overflow:hidden}
+.deadline-fill{height:100%;border-radius:2px;transition:width .3s}
+.empty-ledger{text-align:center;color:var(--muted);font-size:.78rem;padding:20px;font-style:italic}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sebastian's Schedule <span>— Monds / Chen</span></h1>
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:#4a7aac"></div>Shane</div>
+    <div class="li"><div class="ld" style="background:#c2622a"></div>Kuan-Yu</div>
+    <div class="li"><div class="ld" style="background:linear-gradient(var(--kuan-bg)50%,var(--shane-bg)50%);border:1px solid #bbb"></div>Split day (top=AM / bot=PM)</div>
+    <div class="li"><div class="ld" style="background:#c7dff5;border:1px solid #4a7aac"></div>Shane (summer)</div>
+    <div class="li"><div class="ld" style="background:#fad5be;border:1px solid #c2622a"></div>Kuan-Yu (summer)</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('cal',this)">📅 Calendar</button>
+  <button class="tab" onclick="showTab('reimb',this)">💰 Expenses</button>
+  <button class="tab" onclick="showTab('log',this)">📋 Change Log</button>
+  <button class="tab" onclick="showTab('hisd',this)">🏫 HISD Calendar</button>
+  <button class="tab" onclick="showTab('decree',this)">⚖️ Rules & Decree</button>
+</div>
+
+<div id="tab-cal" class="page active">
+  <div class="cal-wrap">
+    <div class="month-nav">
+      <button class="nav-btn" onclick="cm(-1)">←</button>
+      <h2 id="month-title"></h2>
+      <button class="nav-btn" onclick="cm(1)">→</button>
+    </div>
+    <div class="month-note" id="month-note"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+  <div class="detail-panel" id="dp">
+    <div class="dp-head">
+      <div class="dp-title" id="dp-title"></div>
+      <span class="dp-close" onclick="document.getElementById('dp').classList.remove('open')">✕</span>
+    </div>
+    <div id="dp-body"></div>
+  </div>
+</div>
+
+<div id="tab-reimb" class="page">
+<div class="reimb-wrap">
+  <h2>Shared Expenses & Reimbursements</h2>
+  <div class="reimb-rules">
+    <strong>Rules per Decree §4.A:</strong> All expenses must be <strong>agreed upon in advance</strong> before payment if reimbursement is expected — except basic medical emergencies. Submit receipts within <strong>10 days</strong> of payment. Reimbursement due within <strong>30 days</strong> of submission. Disputed items are logged and must be resolved in writing. Discretionary choices (cosmetic, lifestyle, unapproved extracurriculars) are <strong>not automatically reimbursable</strong>.
+  </div>
+
+  <div class="reimb-grid">
+    <!-- SUBMIT FORM -->
+    <div class="reimb-form">
+      <h3>Submit an Expense</h3>
+      <div class="fg"><label>Submitting as</label>
+        <div class="who-row">
+          <button class="who-btn sa" id="rbtn-s" onclick="rSelUser('shane')">Shane</button>
+          <button class="who-btn" id="rbtn-k" onclick="rSelUser('kuan')">Kuan-Yu</button>
+        </div>
+      </div>
+      <div class="fg"><label>Category</label>
+        <select id="r-cat">
+          <option value="medical">Child — Medical / Healthcare</option>
+          <option value="dental">Child — Dental / Co-pay</option>
+          <option value="extracurricular">Child — Extracurricular (pre-agreed)</option>
+          <option value="childcare">Child — Childcare / Aftercare</option>
+          <option value="tuition">Child — School Tuition / Fees</option>
+          <option value="vet">Hazel — Veterinary</option>
+          <option value="other">Other (describe below)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Description</label>
+        <input type="text" id="r-desc" placeholder="e.g. Urgent care visit, soccer registration…">
+      </div>
+      <div class="fg"><label>Total Amount Paid ($)</label>
+        <input type="number" id="r-total" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="fg"><label>Your share ($) — amount you are requesting</label>
+        <input type="number" id="r-req" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="fg"><label>Date Paid</label>
+        <input type="date" id="r-date">
+      </div>
+      <div class="fg"><label>Receipt / Notes</label>
+        <textarea id="r-notes" placeholder="Paste receipt details, provider name, or any relevant notes. Attach receipt image separately to the notification email."></textarea>
+      </div>
+      <label class="check-row"><input type="checkbox" id="r-emergency"> This is a medical emergency (no prior agreement required)</label>
+      <label class="check-row"><input type="checkbox" id="r-agreed"> Prior agreement exists for this expense</label>
+      <button class="sub-btn" onclick="submitExpense()">Submit Expense</button>
+    </div>
+
+    <!-- LEDGER SUMMARY -->
+    <div>
+      <div class="ledger">
+        <div class="ledger-head">
+          <h3>Ledger</h3>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--border)">
+          <!-- Shane side -->
+          <div style="padding:12px 14px;border-right:1px solid var(--border)">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--shane);margin-bottom:8px">Shane</div>
+            <div style="margin-bottom:4px">
+              <div style="font-size:.62rem;color:var(--muted)">Debits (expenses owed)</div>
+              <div id="l-shane-debits" style="font-size:1rem;font-weight:700;color:var(--shane)">$0.00</div>
+            </div>
+            <div>
+              <div style="font-size:.62rem;color:var(--muted)">Credits (payments made)</div>
+              <div id="l-shane-credits" style="font-size:1rem;font-weight:700;color:#16a34a">$0.00</div>
+            </div>
+          </div>
+          <!-- Kuan-Yu side -->
+          <div style="padding:12px 14px">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--kuan);margin-bottom:8px">Kuan-Yu</div>
+            <div style="margin-bottom:4px">
+              <div style="font-size:.62rem;color:var(--muted)">Debits (expenses owed)</div>
+              <div id="l-kuan-debits" style="font-size:1rem;font-weight:700;color:var(--kuan)">$0.00</div>
+            </div>
+            <div>
+              <div style="font-size:.62rem;color:var(--muted)">Credits (payments made)</div>
+              <div id="l-kuan-credits" style="font-size:1rem;font-weight:700;color:#16a34a">$0.00</div>
+            </div>
+          </div>
+        </div>
+        <!-- NET BALANCE -->
+        <div id="l-net-banner" style="padding:14px;text-align:center;background:var(--neutral)">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">Net Balance</div>
+          <div id="l-net-amount" style="font-size:1.5rem;font-weight:700;color:var(--text)">$0.00</div>
+          <div id="l-net-label" style="font-size:.74rem;color:var(--muted);margin-top:2px">All settled</div>
+        </div>
+        <div id="expense-list"><div class="empty-ledger">No expenses submitted yet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="tab-hisd" class="page">
+  <div style="padding:16px;max-width:680px;margin:0 auto">
+    <h2 style="font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:10px">HISD 2026–2027 Official School Calendar</h2>
+    <p style="font-size:.76rem;color:var(--muted);margin-bottom:14px;line-height:1.6">All holidays and no-school days in Sebastian's calendar are sourced directly and unmodified from the official Houston Independent School District yearly calendar. Nothing has been changed.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+      <a href="https://resources.finalsite.net/images/v1771011921/houstonisdorg/lbe48uuitkm4zvhfb2nc/2026-2027YearlyCalendarFinal1_29_26English.pdf" target="_blank"
+        style="display:flex;align-items:center;gap:10px;background:#f0f9ff;border:1px solid #0284c7;border-radius:9px;padding:13px 16px;text-decoration:none;color:#0c4a6e;font-size:.84rem;font-weight:600">
+        <span style="font-size:1.4rem">⬇</span>
+        <div>
+          <div style="font-weight:700">Download Official HISD 2026–2027 Calendar PDF</div>
+          <div style="font-size:.7rem;font-weight:400;opacity:.8;margin-top:2px">resources.finalsite.net · Houston ISD official document</div>
+        </div>
+      </a>
+      <a href="https://www.houstonisd.org/our-district/district-calendar" target="_blank"
+        style="display:flex;align-items:center;gap:10px;background:#f0f9ff;border:1px solid #0284c7;border-radius:9px;padding:13px 16px;text-decoration:none;color:#0c4a6e;font-size:.84rem;font-weight:600">
+        <span style="font-size:1.4rem">🔗</span>
+        <div>
+          <div style="font-weight:700">HISD District Calendar Website</div>
+          <div style="font-size:.7rem;font-weight:400;opacity:.8;margin-top:2px">houstonisd.org · Live district calendar</div>
+        </div>
+      </a>
+    </div>
+    <div style="background:var(--neutral);border-radius:8px;padding:11px 13px;font-size:.74rem;color:var(--muted);line-height:1.6">
+      <strong style="color:var(--text)">Key dates 2026–2027:</strong><br>
+      First day of school: <strong>August 10, 2026</strong><br>
+      Last day for students: <strong>May 28, 2027</strong><br>
+      Thanksgiving recess: Nov 23–27, 2026<br>
+      Winter break: Dec 21, 2026 – Jan 2, 2027<br>
+      Spring break: Mar 8–12, 2027<br>
+      No-school PD days: Sep 21, Oct 9, Nov 6, Jan 4, Feb 15, Mar 26, Apr 16
+    </div>
+  </div>
+</div>
+
+<div id="tab-log" class="page">
+  <div style="padding:14px;max-width:680px;margin:0 auto">
+    <h2 style="font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:12px">Schedule Change Log</h2>
+
+    <!-- Policy statement -->
+    <div style="background:var(--neutral);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:14px;font-size:.78rem;color:var(--text);line-height:1.7">
+      Unless submitted in writing and accepted in writing, the schedule reflects the rules set forth by the divorce decree.<br><br>
+      Changes must be <strong>requested via email</strong> and <strong>agreed to via signed document</strong> — Adobe PDF, DocuSign, or printed, signed, and emailed back. Once both parties have co-signed, the executed document may be uploaded below for record-keeping.
+    </div>
+
+    <!-- Warning banner -->
+    <div style="background:#fef2f2;border:2px solid #dc2626;border-radius:9px;padding:14px;margin-bottom:18px;text-align:center">
+      <div style="font-size:.8rem;font-weight:700;color:#dc2626;letter-spacing:.03em;line-height:1.6">
+        ⚠ CHANGES TO THE SCHEDULE WILL NOT AUTOMATICALLY BE UPDATED INTO THIS CALENDAR.<br>
+        IT IS THE RESPONSIBILITY OF BOTH PARTIES AFTER CO-SIGNING A SCHEDULE CHANGE<br>
+        TO MAINTAIN THAT IN THEIR PERSONAL CALENDAR.
+      </div>
+    </div>
+
+    <!-- Upload log -->
+    <h3 style="font-family:'DM Serif Display',serif;font-size:.96rem;margin-bottom:10px">Uploaded Signed Agreements</h3>
+
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Description of change</label>
+      <input type="text" id="cl-desc" placeholder="e.g. Swap weekend Nov 7–9 2026 — both parties agreed" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.82rem;margin-bottom:8px">
+      <label style="display:block;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Date signed</label>
+      <input type="date" id="cl-date" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.82rem;margin-bottom:8px">
+      <label style="display:block;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Attach signed document</label>
+      <input type="file" id="cl-file" accept=".pdf,.jpg,.jpeg,.png" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:7px;font-size:.78rem;background:var(--white);margin-bottom:8px">
+      <button onclick="logChange()" style="width:100%;padding:10px;background:var(--text);color:var(--white);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer">Upload & Log Agreement</button>
+    </div>
+
+    <div id="cl-list">
+      <div style="text-align:center;color:var(--muted);font-size:.76rem;padding:18px;font-style:italic">No signed agreements uploaded yet</div>
+    </div>
+  </div>
+</div>
+
+
+<div id="tab-decree" class="page">
+<div class="dec-wrap">
+  <h2>Possession Rules & Handoff Times</h2>
+  <p class="dec-sub">Per Final Decree of Divorce — Harris County Cause No. 202591144. Midpoint rule applied where decree is silent on specific times.</p>
+
+  <div class="dh">📚 School Year — Friday (Handoff to Shane)</div>
+  <div class="dr"><strong>Handoff via school:</strong> Shane picks Sebastian up from school between <strong>3:00 PM and 6:00 PM</strong> at Shane's discretion.</div>
+  <div class="dr"><strong>🐕 Hazel:</strong> Shane collects Hazel from Kuan-Yu's home at <strong>8:00 AM</strong> on the same day. If not possible, surrogate required.</div>
+
+  <div class="dh">📚 School Year — Monday (Handoff to Kuan-Yu)</div>
+  <div class="dr"><strong>Handoff via school:</strong> Shane drops Sebastian at school at <strong>7:30 AM</strong>. Sebastian stays all day. Kuan-Yu picks up from school between <strong>3:00 PM and 6:00 PM</strong> at Kuan-Yu's discretion.</div>
+  <div class="dr"><strong>🐕 Hazel:</strong> Kuan-Yu collects Hazel from Shane's home at <strong>8:00 AM</strong>. If not possible, surrogate required.</div>
+
+  <div class="dh">📅 School-Year HISD Holidays — 2:00 PM Midpoint Handoff</div>
+  <div class="dr note">* The decree does not specify handoff times on school-year HISD holidays. Time calculated at exact midpoint of Sebastian's day: wake 6:30 AM → bed 8:30 PM (14-hour day) = <strong>2:00 PM</strong>. Hazel travels with Sebastian at 2:00 PM on these days (not separately at 8:00 AM).</div>
+  <div class="dr"><strong>Monday holidays:</strong> Shane holds AM → Kuan-Yu drives to Shane's home, picks up Sebastian and Hazel at <strong>2:00 PM</strong>.</div>
+  <div class="dr"><strong>Friday holidays:</strong> Kuan-Yu holds AM → Shane drives to Kuan-Yu's home, picks up Sebastian and Hazel at <strong>2:00 PM</strong>.</div>
+  <div class="dr"><strong>Tue–Thu holidays:</strong> Kuan-Yu holds all day — regular weekday possession. No handoff.</div>
+
+  <div class="dh">🌅 End of School Year 2025–2026</div>
+  <div class="dr"><strong>Jun 4, 2026:</strong> Last day for students (school in session).</div>
+  <div class="dr"><strong>Jun 5, 2026 (Friday):</strong> HISD Staff PD — students do not report. Treated as Friday holiday: Kuan-Yu holds AM → Shane picks up Sebastian and Hazel from Kuan-Yu's home at <strong>2:00 PM</strong>.</div>
+  <div class="dr"><strong>Jun 6–7 (Sat–Sun):</strong> Shane has Sebastian. Summer schedule begins at <strong>5:00 PM Sunday Jun 7</strong> — Kuan-Yu picks up Sebastian and Hazel from Shane's home.</div>
+
+  <div class="dh">☀️ Summer 2026 (Jun 7 5PM – Aug 9 2026)</div>
+  <div class="dr"><strong>Kuan-Yu takes first full week</strong> starting Jun 7 at 5:00 PM.</div>
+  <div class="dr"><strong>Week-on / week-off, exchanging every Sunday at 5:00 PM.</strong> Possessing parent drops Sebastian and Hazel at other parent's home.</div>
+  <div class="dr"><strong>Summer ends:</strong> Shane's last summer week ends when school begins Aug 10. Sebastian goes to school Monday Aug 10 (first day).</div>
+
+  <div class="dh">📚 School Year 2026–2027 Begins Aug 10, 2026</div>
+  <div class="dr">Same Friday/Monday school handoff rules apply. HISD 2026–2027 holidays loaded into calendar.</div>
+
+  <div class="dh">🎄 Holidays — 2025 (Odd Year)</div>
+  <div class="dr"><strong>Thanksgiving (Nov 24–28):</strong> Kuan-Yu.</div>
+  <div class="dr"><strong>Christmas:</strong> Shane — Dec 24 8AM to Dec 25 5PM. Kuan-Yu — Dec 25 5PM to Dec 27 8AM.</div>
+
+  <div class="dh">🎄 Holidays — 2026 (Even Year)</div>
+  <div class="dr"><strong>General holidays:</strong> Kuan-Yu.</div>
+  <div class="dr"><strong>Thanksgiving (Nov 23–27, 2026):</strong> Shane.</div>
+  <div class="dr"><strong>Spring Break (Mar 9–13, 2026):</strong> Kuan-Yu.</div>
+  <div class="dr"><strong>Christmas:</strong> Kuan-Yu — Dec 24 8AM to Dec 25 5PM. Shane — Dec 25 5PM to Dec 27 8AM.</div>
+
+  <div class="dh">🎄 Holidays — 2027 (Odd Year)</div>
+  <div class="dr"><strong>General holidays:</strong> Shane.</div>
+  <div class="dr"><strong>Thanksgiving (Nov 2027):</strong> Kuan-Yu.</div>
+  <div class="dr"><strong>Spring Break (Mar 8–12, 2027):</strong> Shane.</div>
+
+  <div class="dh">🐕 Hazel — Dog Handoff</div>
+  <div class="dr warn">
+    <strong>Every custody change, Hazel goes too.</strong><br><br>
+    <strong>School Fridays &amp; Mondays:</strong> Hazel collected at 8:00 AM from outgoing parent's home by incoming parent. Separate from Sebastian's school drop/pickup.<br>
+    <strong>Holiday midpoint days (2:00 PM):</strong> Hazel travels with Sebastian.<br>
+    <strong>Summer Sundays (5:00 PM):</strong> Hazel goes with Sebastian.<br>
+    <strong>If incoming parent cannot make appointed time: surrogate must be sent. No exceptions.</strong>
+  </div>
+
+  <div class="dh">✈️ Travel Notice</div>
+  <div class="dr"><strong>Out of state:</strong> 2 weeks written notice + written agreement.</div>
+  <div class="dr"><strong>Out of country:</strong> 1 month written notice + written agreement.</div>
+
+  <div class="dh">💰 Shared Expenses (50/50)</div>
+  <div class="dr">Childcare, tuition, extracurriculars, medical, co-pays. Receipt within 10 days; reimbursement within 30 days.</div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── NO-SCHOOL DATES ─────────────────────────────────────
+// 2025-2026 school year
+const NO_SCHOOL_2526 = new Set([
+  // Sep 2025
+  '2025-09-01', // Labor Day
+  '2025-09-02', // HISD PD
+  // Oct 2025
+  '2025-10-02', // HISD PD
+  '2025-10-03', // Fall Recess
+  // Nov 2025
+  '2025-11-07', // HISD PD
+  '2025-11-24','2025-11-25','2025-11-26','2025-11-27','2025-11-28', // Thanksgiving week
+  // Dec 2025 - Winter Break
+  '2025-12-19', // Last day? (check - actually last day is different)
+  '2025-12-22','2025-12-23','2025-12-24','2025-12-25','2025-12-26',
+  '2025-12-29','2025-12-30','2025-12-31',
+  // Jan 2026
+  '2026-01-01','2026-01-02',
+  '2026-01-05', // HISD PD
+  '2026-01-19', // MLK Day
+  // Feb 2026
+  '2026-02-13', // HISD PD
+  '2026-02-16', // Presidents Day
+  // Mar 2026 - Spring Break
+  '2026-03-09','2026-03-10','2026-03-11','2026-03-12','2026-03-13',
+  '2026-03-30', // Chavez-Huerta
+  // Apr 2026
+  '2026-04-03', // Spring Recess
+  // May 2026
+  '2026-05-25', // Memorial Day
+  // Jun 2026
+  '2026-06-05', // Staff PD - students do NOT report (last day was Jun 4)
+]);
+
+// 2026-2027 school year (updated from HISD Rev 4/6/26)
+const NO_SCHOOL_2627 = new Set([
+  // Jun 2026
+  '2026-06-19', // Juneteenth
+  // Jul 2026
+  '2026-07-02', // Recess
+  '2026-07-03', // Independence Day observed
+  // Sep 2026
+  '2026-09-07', // Labor Day
+  '2026-09-21', // HISD PD
+  // Oct 2026
+  '2026-10-09', // HISD PD
+  // Nov 2026
+  '2026-11-06', // HISD PD ← added from updated calendar
+  '2026-11-23','2026-11-24','2026-11-25','2026-11-26','2026-11-27', // Thanksgiving week
+  // Dec 2026 - Winter Break
+  '2026-12-21','2026-12-22','2026-12-23','2026-12-24','2026-12-25',
+  '2026-12-26','2026-12-27','2026-12-28','2026-12-29','2026-12-30','2026-12-31',
+  // Jan 2027
+  '2027-01-01', // New Year's Day
+  '2027-01-04', // HISD PD
+  '2027-01-18', // MLK Jr. Day
+  // Feb 2027
+  '2027-02-15', // HISD PD
+  // Mar 2027 - Spring Break
+  '2027-03-08','2027-03-09','2027-03-10','2027-03-11','2027-03-12',
+  '2027-03-26', // HISD PD
+  '2027-03-29', // Chavez-Huerta Day
+  // Apr 2027
+  '2027-04-16', // HISD PD
+  // May 2027
+  '2027-05-31', // Memorial Day
+]);
+
+const HOL_NAME = {
+  '2025-09-01':'Labor Day','2025-09-02':'HISD PD',
+  '2025-10-02':'HISD PD','2025-10-03':'Fall Recess',
+  '2025-11-07':'HISD PD',
+  '2025-11-24':'Thanksgiving Wk','2025-11-25':'Thanksgiving Wk',
+  '2025-11-26':'Thanksgiving Wk','2025-11-27':'Thanksgiving',
+  '2025-11-28':'Thanksgiving Wk',
+  '2025-12-19':'Last School Day',
+  '2025-12-22':'Winter Break','2025-12-23':'Winter Break',
+  '2025-12-24':'Christmas Eve','2025-12-25':'Christmas',
+  '2025-12-26':'Winter Break','2025-12-27':'Winter Break',
+  '2025-12-28':'Winter Break','2025-12-29':'Winter Break',
+  '2025-12-30':'Winter Break','2025-12-31':"New Year's Eve",
+  '2026-01-01':"New Year's Day",'2026-01-02':'Winter Break',
+  '2026-01-05':'HISD PD','2026-01-19':'MLK Jr. Day',
+  '2026-02-13':'HISD PD','2026-02-16':"Presidents' Day",
+  '2026-03-09':'Spring Break','2026-03-10':'Spring Break',
+  '2026-03-11':'Spring Break','2026-03-12':'Spring Break',
+  '2026-03-13':'Spring Break',
+  '2026-03-30':'Chavez-Huerta Day','2026-04-03':'Spring Recess',
+  '2026-05-25':'Memorial Day',
+  '2026-06-05':'HISD PD (no students)',
+  '2026-06-19':'Juneteenth',
+  '2026-07-02':'Recess','2026-07-03':'Independence Day',
+  '2026-09-07':'Labor Day','2026-09-21':'HISD PD',
+  '2026-10-09':'HISD PD',
+  '2026-11-06':'HISD PD',
+  '2026-11-23':'Thanksgiving Wk','2026-11-24':'Thanksgiving Wk',
+  '2026-11-25':'Thanksgiving Wk','2026-11-26':'Thanksgiving',
+  '2026-11-27':'Thanksgiving Wk',
+  '2026-12-21':'Winter Break','2026-12-22':'Winter Break',
+  '2026-12-23':'Winter Break','2026-12-24':'Christmas Eve',
+  '2026-12-25':'Christmas','2026-12-26':'Winter Break',
+  '2026-12-27':'Winter Break','2026-12-28':'Winter Break',
+  '2026-12-29':'Winter Break','2026-12-30':'Winter Break',
+  '2026-12-31':"New Year's Eve",
+  '2027-01-01':"New Year's Day",'2027-01-04':'HISD PD',
+  '2027-01-18':'MLK Jr. Day',
+  '2027-02-15':'HISD PD',
+  '2027-03-08':'Spring Break','2027-03-09':'Spring Break',
+  '2027-03-10':'Spring Break','2027-03-11':'Spring Break',
+  '2027-03-12':'Spring Break',
+  '2027-03-26':'HISD PD','2027-03-29':'Chavez-Huerta Day',
+  '2027-04-16':'HISD PD',
+  '2027-05-31':'Memorial Day',
+};
+
+function isNoSchool(key) {
+  return NO_SCHOOL_2526.has(key) || NO_SCHOOL_2627.has(key);
+}
+
+// ── KEY DATES ────────────────────────────────────────────
+const SY1_START = new Date(2025,7,12);   // Aug 12 2025 — school year 1 starts
+const SY1_END   = new Date(2026,5,4);    // Jun 4 2026  — last student day
+const JUN5      = new Date(2026,5,5);    // Jun 5 2026  — HISD PD, Shane pickup 2:00 PM
+const JUN7_5PM  = new Date(2026,5,7,17); // Jun 7 2026 5pm — summer begins
+const SUM_START = new Date(2026,5,7);    // Jun 7 2026 (Sunday)
+const SUM_END   = new Date(2026,7,9);    // Aug 9 2026 (Sunday before school starts)
+const SY2_START = new Date(2026,7,10);   // Aug 10 2026 — school year 2 starts
+const SY2_END   = new Date(2027,4,28);   // May 28 2027 — last student day
+const SY2_AFTER = new Date(2027,4,29);   // May 29 2027 — summer TBD starts
+
+const msW = 7*24*60*60*1000;
+
+function dk(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// Summer week-on/week-off:
+// Week 0 starts Jun 7 (Sunday) — Kuan-Yu has it (she picks up at 5pm Jun 7)
+// Each subsequent week flips on Sunday 5pm
+// So: Sun Jun 7 = Kuan-Yu starts (wk 0 = kuan)
+//     Sun Jun 14 = Shane starts (wk 1 = shane)
+//     Sun Jun 21 = Kuan-Yu (wk 2) etc.
+function summerPossession(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const wk = Math.floor((d - SUM_START) / msW);
+  return wk % 2 === 0 ? 'kuan' : 'shane';
+}
+
+// ── SPECIAL OVERRIDE DATES ───────────────────────────────
+// These are date ranges where possession is explicitly set by decree holidays
+
+function isInSet(key, arr) { return arr.includes(key); }
+
+const THANKS_2025 = ['2025-11-24','2025-11-25','2025-11-26','2025-11-27','2025-11-28'];
+const XMAS25_SHANE = ['2025-12-24','2025-12-25'];
+const XMAS25_KUAN  = ['2025-12-26','2025-12-27','2025-12-28'];
+const WINTER_BREAK_25 = ['2025-12-22','2025-12-23','2025-12-29','2025-12-30','2025-12-31','2026-01-01','2026-01-02'];
+const SPRING_BREAK_26 = ['2026-03-09','2026-03-10','2026-03-11','2026-03-12','2026-03-13'];
+// 2026 Thanksgiving (even year) = Shane
+const THANKS_2026 = ['2026-11-23','2026-11-24','2026-11-25','2026-11-26','2026-11-27'];
+// 2026 Christmas (even year) = Kuan-Yu Dec24-25, Shane Dec25eve-27
+const XMAS26_KUAN = ['2026-12-24','2026-12-25'];
+const XMAS26_SHANE = ['2026-12-26','2026-12-27'];
+const WINTER_BREAK_26 = ['2026-12-21','2026-12-22','2026-12-23','2026-12-28','2026-12-29','2026-12-30','2026-12-31','2027-01-01','2027-01-02'];
+// 2027 Spring Break (odd year) = Shane
+const SPRING_BREAK_27 = ['2027-03-08','2027-03-09','2027-03-10','2027-03-11','2027-03-12'];
+
+// ── DESC FUNCTION ────────────────────────────────────────
+function desc(date) {
+  const d   = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const key = dk(d);
+  const dow = d.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  const noSch = isNoSchool(key);
+  const hn = HOL_NAME[key] || '';
+
+  // Out of tracked range
+  if (d < SY1_START) return null;
+
+  // May 28 2027 — last student day marker
+  if (key === '2027-05-28') {
+    // It's a Thursday — Kuan-Yu's normal weekday, but mark it specially
+    return mkSolid('kuan','Kuan-Yu','Last day of school','End of 2026–2027 HISD',false,
+      `<div class="hcard"><strong>End of 2026–2027 HISD School Year</strong><br>
+      May 28, 2027 — Last day for students. Sebastian with Kuan-Yu (regular Thursday possession).</div>`);
+  }
+
+  // May 29 2027 onward — summer TBD
+  if (d >= SY2_AFTER) {
+    return {
+      topBg:'bg-tbd', botBg:'bg-tbd',
+      topCol:'col-tbd', botCol:'col-tbd',
+      bdr:'bdr-tbd', split:false,
+      topLabel:'Summer 2027', topTime:'TBD',
+      divText:'', botLabel:'', botTime:'', dog:false,
+      detail:`<div class="mcard"><strong>Summer Schedule 2027 — TBD</strong><br>
+      Upon agreement or enforcement of existing rules of decree as applied in Summer 2026, if there is no formal written agreement to the schedule of Summer 2027.</div>`
+    };
+  }
+
+  if (d > SY2_END) return null;
+
+  // ── JUN 5 2026 special ──────────────────────────────
+  // Friday HISD PD — students don't report. Shane picks up 2:00 PM (midpoint, not school day)
+  if (key === '2026-06-05') {
+    return mkSplit('kuan','shane',
+      'Kuan-Yu', 'HISD PD — no students',
+      'Handoff: Kuan-Yu → Shane  2:00 PM',
+      'Shane picks up','from Kuan-Yu\'s home 2:00 PM',
+      true,
+      `<div class="hcard"><strong>Handoff: Kuan-Yu → Shane — HISD PD Day</strong><br>
+      Students do not report. Shane drives to Kuan-Yu's home and picks up Sebastian and Hazel at <strong>2:00 PM</strong>.</div>
+      <div class="dcard">🐕 <strong>Hazel</strong> goes with Sebastian at 2:00 PM.</div>
+      <div class="mcard">* Treated as non-school Friday: midpoint handoff 2:00 PM per the exact midpoint of Sebastian's day (6:30 AM wake → 8:30 PM bed = 2:00 PM midpoint).</div>`
+    );
+  }
+
+  // ── JUN 6 2026 (Sat) — Shane ────────────────────────
+  if (key === '2026-06-06') {
+    return mkSolid('shane','Shane','Weekend — summer begins Sun','',false,
+      `<div class="dcard">Sebastian with <strong>Shane</strong>. Summer schedule begins tomorrow (Sun Jun 7) at 5:00 PM when Kuan-Yu picks up.</div>`);
+  }
+
+  // ── JUN 7 2026 (Sun) — Shane AM, Kuan-Yu 5PM ────────
+  if (key === '2026-06-07') {
+    return mkSplit('shane','kuan',
+      'Shane (AM)', 'holds until 5:00 PM',
+      'Summer begins: Shane → Kuan-Yu  5:00 PM',
+      'Kuan-Yu starts week 1','picks up 5:00 PM',
+      true,
+      `<div class="hcard"><strong>Summer Schedule Begins — 5:00 PM</strong><br>
+      Shane holds Sebastian through <strong>5:00 PM</strong>.<br>
+      Kuan-Yu picks up Sebastian and Hazel from Shane's home at <strong>5:00 PM</strong>.<br>
+      Kuan-Yu holds Week 1 of summer.</div>
+      <div class="dcard">🐕 <strong>Hazel</strong> goes with Sebastian at 5:00 PM.</div>`
+    );
+  }
+
+  // ── SUMMER (Jun 8 – Aug 9) ───────────────────────────
+  if (d > SUM_START && d <= SUM_END) {
+    const wkNum = Math.floor((d - SUM_START) / msW);
+    const who = wkNum % 2 === 0 ? 'kuan' : 'shane';
+    const nm  = who === 'shane' ? 'Shane' : 'Kuan-Yu';
+    const bgT = who === 'shane' ? 'bg-summer-shane' : 'bg-summer-kuan';
+
+    if (dow === 0) { // Sunday exchange
+      // AM = previous week's holder (same as Saturday)
+      // PM = this week's holder (who picks up at 5PM)
+      const wk = Math.floor((d - SUM_START) / msW);
+      const inc = wk % 2 === 0 ? 'kuan' : 'shane'; // incoming (new week)
+      const out = inc === 'kuan' ? 'shane' : 'kuan'; // outgoing (had Saturday AM)
+      const oNm = out === 'shane' ? 'Shane' : 'Kuan-Yu';
+      const iNm = inc === 'shane' ? 'Shane' : 'Kuan-Yu';
+      const oBg = out === 'shane' ? 'bg-summer-shane' : 'bg-summer-kuan';
+      const iBg = inc === 'shane' ? 'bg-summer-shane' : 'bg-summer-kuan';
+      return {
+        topBg:oBg, botBg:iBg,
+        topCol: out==='shane'?'col-shane':'col-kuan',
+        botCol: inc==='shane'?'col-shane':'col-kuan',
+        bdr:'bdr-split', split:true,
+        topLabel: oNm+' (AM)', topTime:'holds until 5:00 PM',
+        divText:'Handoff: '+oNm+' → '+iNm+'  5:00 PM',
+        botLabel: iNm+' starts week', botTime:'picks up 5:00 PM',
+        dog:true,
+        detail:`<div class="hcard"><strong>Summer Exchange — 5:00 PM</strong><br>
+        ${oNm} drops Sebastian and Hazel at ${iNm}'s home at <strong>5:00 PM</strong>.</div>
+        <div class="dcard">🐕 <strong>Hazel</strong> goes with Sebastian at 5:00 PM.</div>`
+      };
+    }
+    // Non-Sunday summer day
+    return {
+      topBg:bgT, botBg:bgT,
+      topCol: who==='shane'?'col-shane':'col-kuan',
+      botCol: who==='shane'?'col-shane':'col-kuan',
+      bdr: who==='shane'?'bdr-shane':'bdr-kuan',
+      split:false,
+      topLabel: nm+' (Summer)', topTime:'week-on/week-off',
+      divText:'', botLabel:'', botTime:'', dog:false,
+      detail:`<div class="dcard">Summer — Sebastian with <strong>${nm}</strong> all day.</div>`
+    };
+  }
+
+  // ── SCHOOL YEAR 1 (Aug 12 2025 – Jun 4 2026) ─────────
+  // ── SCHOOL YEAR 2 (Aug 10 2026 – May 28 2027) ────────
+  const inSY1 = d >= SY1_START && d <= SY1_END;
+  const inSY2 = d >= SY2_START && d <= SY2_END;
+  if (!inSY1 && !inSY2) {
+    // Gap between school years / before summer etc — return null for out of range
+    // Jun 2026 pre-summer gap handled above, Aug 10 handled by SY2
+    return null;
+  }
+
+  // ── HOLIDAY POSSESSION OVERRIDES ─────────────────────
+
+  // Spring Break 2026 — no decree assignment, follows normal weekday/weekend rules (school closed = 2PM midpoint handoffs)
+
+  // ── THANKSGIVING 2026 (even year → Shane) ────────────
+  // Shane gets full block: Fri Nov 20 pickup through Mon Nov 30 school drop
+  // Nov 20 (Fri): normal Friday split — Kuan-Yu AM → Shane picks up school 3-6 PM
+  // Nov 21–29: Shane solid
+  // Nov 30 (Mon): normal Monday split — Shane drops school 7:30 AM → Kuan-Yu picks up
+  const THANKS26_SHANE_SOLID = ['2026-11-21','2026-11-22','2026-11-23','2026-11-24',
+    '2026-11-25','2026-11-26','2026-11-27','2026-11-28','2026-11-29'];
+  if (THANKS26_SHANE_SOLID.includes(key)) return mkSolid('shane','Shane',
+    hn||'Thanksgiving Wk','Shane — Thanksgiving block',false,
+    `<div class="dcard"><strong>Thanksgiving 2026 — Shane's possession</strong><br>
+    Decree §6.A.4: Even year — Shane holds from Friday Nov 20 school dismissal through Monday Nov 30 school drop.</div>`);
+
+  // ── CHRISTMAS 2026 (even year) ───────────────────────
+  // Dec 21 (Mon): winter break starts — follow normal Mon rule (Shane drops 7:30, Kuan-Yu picks up 2PM from school/home)
+  // Dec 22–23 (Tue–Wed): Kuan-Yu (normal weekday possession, no school)
+  // Dec 24 (Thu): DECREE OVERRIDE — Shane picks up from Kuan-Yu's home at 8:00 AM
+  // Dec 25 (Fri): DECREE — Kuan-Yu picks up from Shane's home at 5:00 PM
+  // Dec 26–27 (Sat–Sun): Shane (decree: Shane holds Dec 25 5PM → Dec 27 8AM — but 2026 is even so Kuan-Yu gets Dec24-25, Shane gets Dec25eve-27)
+  // Wait — 2026 even: Kuan-Yu Dec24 8AM–Dec25 5PM / Shane Dec25 5PM–Dec27 8AM
+  // Dec 24 (Thu): Kuan-Yu picks up from Shane's home at 8:00 AM (even year — Kuan-Yu's Christmas)
+  if (key === '2026-12-24') return mkSolid('kuan','Kuan-Yu','Christmas Eve',
+    'Holds through Dec 25 5PM',false,
+    `<div class="dcard"><strong>Christmas Eve 2026</strong> — Sebastian with <strong>Kuan-Yu</strong>.<br>
+    2026 = even year. Kuan-Yu holds Dec 24 8:00 AM through Dec 25 5:00 PM per decree §6.A.4.iv.<br>
+    Sebastian is already with Kuan-Yu — no handoff today.</div>`);
+
+  if (key === '2026-12-25') return mkSplit('kuan','shane',
+    'Kuan-Yu — Christmas','holds until 5:00 PM',
+    'Christmas handoff: Kuan-Yu → Shane  5:00 PM (decree)',
+    'Shane','holds Dec 25 5PM – Dec 27 8AM',
+    true,
+    `<div class="hcard"><strong>Christmas 2026 — Decree Handoff</strong><br>
+    Kuan-Yu holds through <strong>5:00 PM</strong>. Shane picks up Sebastian and Hazel from Kuan-Yu's home at <strong>5:00 PM</strong>.<br>
+    Shane holds Dec 25 5PM through Dec 27 8AM per decree §6.A.4.iv.</div>`);
+
+  if (key === '2026-12-26') return mkSolid('shane','Shane','Winter Break — Shane','Dec 25 5PM–Dec 27 8AM',false,
+    `<div class="dcard"><strong>Winter Break</strong> — Sebastian with <strong>Shane</strong>.<br>Decree: Shane holds Dec 25 5PM through Dec 27 8AM.</div>`);
+
+  // Dec 27 (Sun): Shane holds until 8AM, then it returns to normal winter break pattern
+  // After Dec 27 8AM Kuan-Yu resumes. Dec 27 is a Sunday — use split: Shane AM until 8AM handoff... 
+  // Actually 8AM is very early. Treat Dec 27 as: Shane holds all day (he received Dec 25 5PM, holds through Dec 27 8AM means morning only)
+  // Then Dec 27 rest of day → Kuan-Yu. Split at 8AM is unusual — let's show it clearly.
+  if (key === '2026-12-27') return mkSplit('shane','kuan',
+    'Shane','holds until 8:00 AM',
+    'Decree handoff: Shane → Kuan-Yu  8:00 AM',
+    'Kuan-Yu — Winter Break','from 8:00 AM',
+    true,
+    `<div class="hcard"><strong>End of Christmas window — 8:00 AM</strong><br>
+    Shane's Christmas possession ends at <strong>8:00 AM</strong> per decree §6.A.4.iv.<br>
+    Kuan-Yu picks up Sebastian and Hazel from Shane's home at 8:00 AM. Winter break continues under normal weekday possession (Kuan-Yu).</div>`);
+
+  // Rest of winter break 2026 (Dec 21-23, Dec 28-31, Jan 1-2) → normal weekday/weekend pattern
+  // Dec 21 Mon: normal Monday split (Shane drops 7:30 school → but school is out, so 2PM midpoint handoff)
+  // Dec 22-23 Tue-Wed: Kuan-Yu
+  // Dec 28 Mon: Kuan-Yu (she just received Dec 27 8AM)
+  // Dec 29-31: follow Tue-Thu → Kuan-Yu
+  const WINTER_REST_26_KUAN = ['2026-12-22','2026-12-23','2026-12-28','2026-12-29','2026-12-30','2026-12-31'];
+  if (WINTER_REST_26_KUAN.includes(key)) return mkSolid('kuan','Kuan-Yu',hn||'Winter Break','',false,
+    `<div class="dcard"><strong>${hn||'Winter Break'}</strong> — Sebastian with <strong>Kuan-Yu</strong>.</div>`);
+
+  // Dec 21 (Mon, school out) — treated as Monday holiday: Shane drops at 2PM
+  if (key === '2026-12-21') return mkSplit('shane','kuan',
+    'Shane','Winter Break starts — holds AM',
+    'Handoff: Shane → Kuan-Yu  2:00 PM',
+    'Kuan-Yu receives','at Shane\'s home 2:00 PM',
+    true,
+    `<div class="hcard"><strong>Handoff: Shane → Kuan-Yu — Winter Break begins</strong><br>
+    No school. Shane holds Sebastian through <strong>2:00 PM</strong>.<br>
+    Kuan-Yu drives to Shane's home to pick up Sebastian and Hazel at <strong>2:00 PM</strong>.</div>
+    <div class="mcard">* Midpoint rule applies: no school = 2:00 PM handoff (6:30 AM wake → 8:30 PM bed midpoint, agreed 2:00 PM). Hazel goes with Sebastian.</div>`);
+
+  // Spring Break 2027 — no decree assignment, follows normal weekday/weekend rules (school closed = 2PM midpoint handoffs)
+
+  // ── FRIDAY ───────────────────────────────────────────
+  if (dow === 5) {
+    if (!noSch) {
+      // Regular school Friday — handoff via school
+      return mkSplit('kuan','shane',
+        'Kuan-Yu','school day AM',
+        'Handoff via school: Kuan-Yu → Shane  3–6 PM',
+        'Shane picks up','from school 3:00–6:00 PM',
+        false, // hazel handled separately at 8am
+        `<div class="hcard"><strong>Handoff via school: Kuan-Yu → Shane</strong><br>
+        Shane picks Sebastian up from <strong>school</strong> between <strong>3:00 PM and 6:00 PM</strong> at Shane's discretion.</div>
+        <div class="dcard">🐕 <strong>Hazel pickup: 8:00 AM</strong> — Shane drives to Kuan-Yu's home to collect Hazel at 8:00 AM. If not possible, surrogate required.</div>`
+      );
+    } else {
+      // Friday HISD holiday — midpoint 2:00 PM, from Kuan-Yu's home
+      return mkSplit('kuan','shane',
+        'Kuan-Yu',hn+' — no school',
+        'Handoff: Kuan-Yu → Shane  2:00 PM',
+        'Shane picks up','at Kuan-Yu\'s home 2:00 PM',
+        true,
+        `<div class="hcard"><strong>Handoff: Kuan-Yu → Shane — ${hn}</strong><br>
+        No school. Shane drives to Kuan-Yu's home and picks up Sebastian and Hazel at <strong>2:00 PM</strong>.</div>
+        <div class="mcard">* Midpoint rule: 6:30 AM wake → 8:30 PM bed = 2:00 PM handoff. Hazel goes with Sebastian.</div>`,
+        true // isHol
+      );
+    }
+  }
+
+  // ── MONDAY ───────────────────────────────────────────
+  if (dow === 1) {
+    if (!noSch) {
+      // Regular school Monday — handoff via school
+      return mkSplit('shane','kuan',
+        'Shane','drops at school 7:30 AM',
+        'Handoff via school: Shane → Kuan-Yu  7:30 AM',
+        'Kuan-Yu picks up','from school 3:00–6:00 PM',
+        false,
+        `<div class="hcard"><strong>Handoff via school: Shane → Kuan-Yu</strong><br>
+        Shane drops Sebastian at <strong>school at 7:30 AM</strong>. Sebastian stays at school all day.<br>
+        Kuan-Yu picks Sebastian up from <strong>school</strong> between <strong>3:00 PM and 6:00 PM</strong> at Kuan-Yu's discretion.</div>
+        <div class="dcard">🐕 <strong>Hazel pickup: 8:00 AM</strong> — Kuan-Yu drives to Shane's home to collect Hazel at 8:00 AM. If not possible, surrogate required.</div>`
+      );
+    } else {
+      // Monday HISD holiday — Shane holds, Kuan-Yu picks up at 2:00 PM
+      return mkSplit('shane','kuan',
+        'Shane', hn+' — Shane holds AM',
+        'Handoff: Shane → Kuan-Yu  2:00 PM',
+        'Kuan-Yu picks up','at Shane\'s home 2:00 PM',
+        true,
+        `<div class="hcard"><strong>Handoff: Shane → Kuan-Yu — ${hn}</strong><br>
+        No school. Shane holds Sebastian through <strong>2:00 PM</strong>.<br>
+        Kuan-Yu drives to Shane's home to pick up Sebastian and Hazel at <strong>2:00 PM</strong>.</div>
+        <div class="mcard">* Midpoint rule: 6:30 AM wake → 8:30 PM bed = 2:00 PM handoff. Hazel goes with Sebastian at 2:00 PM.</div>`,
+        true // isHol
+      );
+    }
+  }
+
+  // ── TUESDAY–THURSDAY ─────────────────────────────────
+  if (dow >= 2 && dow <= 4) {
+    if (noSch) {
+      return mkSolid('kuan','Kuan-Yu',hn,'No school — Kuan-Yu',false,
+        `<div class="dcard"><strong>${hn}</strong> — no school. Sebastian with <strong>Kuan-Yu</strong> (regular weekday possession — no handoff).</div>`,
+        true // isHol
+      );
+    }
+    return mkSolid('kuan','Kuan-Yu','School day','',false,
+      `<div class="dcard">Regular school day. Sebastian with <strong>Kuan-Yu</strong>.<br>School: 7:30 AM – 3:00 PM, aftercare until 6:00 PM.</div>`);
+  }
+
+  // ── SATURDAY / SUNDAY ────────────────────────────────
+  return mkSolid('shane','Shane','Weekend','',false,
+    `<div class="dcard">Weekend — Sebastian with <strong>Shane</strong> all day.</div>`);
+}
+
+// ── HELPERS ─────────────────────────────────────────────
+function mkSplit(topWho,botWho,topLabel,topTime,divText,botLabel,botTime,dog,detail,isHol){
+  return {
+    topBg: topWho==='shane'?'bg-shane':'bg-kuan',
+    botBg: botWho==='shane'?'bg-shane':'bg-kuan',
+    topCol: topWho==='shane'?'col-shane':'col-kuan',
+    botCol: botWho==='shane'?'col-shane':'col-kuan',
+    bdr:'bdr-split', split:true,
+    topLabel, topTime, divText, botLabel, botTime, dog, detail, isHol:!!isHol
+  };
+}
+function mkSolid(who,topLabel,topTime,subLabel,dog,detail,isHol){
+  const bg  = who==='shane'?'bg-shane':'bg-kuan';
+  const col = who==='shane'?'col-shane':'col-kuan';
+  const bdr = who==='shane'?'bdr-shane':'bdr-kuan';
+  return { topBg:bg, botBg:bg, topCol:col, botCol:col,
+    bdr, split:false, topLabel, topTime, divText:'',
+    botLabel:subLabel||'', botTime:'', dog, detail, isHol:!!isHol };
+}
+
+// ── RENDER ──────────────────────────────────────────────
+let curYear, curMonth;
+const today = new Date();
+
+function renderCal() {
+  const MN = ['January','February','March','April','May','June',
+              'July','August','September','October','November','December'];
+  document.getElementById('month-title').textContent = MN[curMonth]+' '+curYear;
+
+  // Month-specific notes
+  const noteEl = document.getElementById('month-note');
+  const monthKey = curYear + '-' + String(curMonth+1).padStart(2,'0');
+  const MONTH_NOTES = {
+    '2026-11': `<strong>Thanksgiving 2026 — Shane's Possession (Even Year)</strong><br>
+      Per decree §6.A.4.iii: Respondent (Shane) shall have possession of Sebastian from the time school is dismissed on the Friday before Thanksgiving break (Nov 20, 3–6 PM) until Sebastian is dropped off at school the Monday Thanksgiving break ends (Nov 30, 7:30 AM). Shane holds Nov 20 PM through Nov 29. Normal schedule resumes Mon Nov 30.`,
+    '2026-12': `<strong>n.b.</strong> — During the school year, holidays do not change the custody format of <em>Monday part 2 – Friday part 1 with Kuan-Yu</em> and <em>Friday part 2 – Monday part 1 with Shane</em>. As there is no school pick-up and drop-off on these days, hand-offs happen at the mid-day point of Monday and Friday, agreed to be at <strong>2:00 PM</strong>, with the incoming party picking up from the other parent's home. This schedule is superseded by the Christmas clause (decree §6.A.4.iv): <em>Even years — Kuan-Yu holds Dec 24 8:00 AM through Dec 25 5:00 PM; Shane holds Dec 25 5:00 PM through Dec 27 8:00 AM.</em> These rules are reflected in the calendar below.`,
+    '2027-06': `<strong>Summer Schedule 2027 — TBD</strong><br>
+      Upon agreement or enforcement of existing rules of decree as applied in Summer 2026, if there is no formal written agreement to the schedule of Summer 2027.`,
+  };
+  if (MONTH_NOTES[monthKey]) {
+    noteEl.innerHTML = MONTH_NOTES[monthKey];
+    noteEl.classList.add('visible');
+  } else {
+    noteEl.innerHTML = '';
+    noteEl.classList.remove('visible');
+  }
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(n => {
+    const h = document.createElement('div');
+    h.className = 'cal-hdr'; h.textContent = n; grid.appendChild(h);
+  });
+
+  const first = new Date(curYear, curMonth, 1).getDay();
+  const dim   = new Date(curYear, curMonth+1, 0).getDate();
+
+  for (let i = 0; i < first; i++) {
+    const e = document.createElement('div'); e.className='cal-day empty'; grid.appendChild(e);
+  }
+
+  for (let day = 1; day <= dim; day++) {
+    const date   = new Date(curYear, curMonth, day);
+    const isToday = dk(today) === dk(date);
+    const d = desc(date);
+
+    const cell = document.createElement('div');
+    if (!d) {
+      cell.className = 'cal-day empty';
+      // Still show the number greyed out
+      const t = document.createElement('div'); t.className='half';
+      t.style.background='#ece9e4';
+      const n = document.createElement('div'); n.className='cnum'; n.style.opacity='.25'; n.textContent=day;
+      t.appendChild(n); cell.appendChild(t);
+      grid.appendChild(cell); continue;
+    }
+
+    cell.className = 'cal-day ' + d.bdr;
+    if (isToday) cell.classList.add('today');
+    if (date < today && !isToday) cell.classList.add('past');
+
+    // TOP HALF
+    const top = document.createElement('div');
+    top.className = 'half ' + d.topBg;
+    const num = document.createElement('div'); num.className='cnum '+d.topCol; num.textContent=day; top.appendChild(num);
+    const tw  = document.createElement('div'); tw.className='cwho '+d.topCol; tw.textContent=d.topLabel; top.appendChild(tw);
+    if (d.topTime) {
+      const tt=document.createElement('div');
+      tt.className='ctime' + (d.isHol ? ' hol-label' : '');
+      tt.textContent=d.topTime; top.appendChild(tt);
+    }
+    // School handoff days: show Hazel 8am note in top half
+    if (d.split && d.divText && d.divText.includes('via school')) {
+      const hz=document.createElement('div'); hz.className='cdog'; hz.textContent='🐕 Hazel: 8:00 AM'; top.appendChild(hz);
+    }
+    cell.appendChild(top);
+
+    if (d.split) {
+      const drow = document.createElement('div'); drow.className='divider-row';
+      const dline = document.createElement('div'); dline.className='dline'; drow.appendChild(dline);
+      cell.appendChild(drow);
+    }
+
+    // BOTTOM HALF
+    const bot = document.createElement('div');
+    bot.className = 'half ' + d.botBg;
+    if (d.botLabel) { const bw=document.createElement('div'); bw.className='cwho '+d.botCol; bw.textContent=d.botLabel; bot.appendChild(bw); }
+    if (d.botTime)  { const bt=document.createElement('div'); bt.className='ctime'; bt.textContent=d.botTime; bot.appendChild(bt); }
+    if (d.dog && !d.divText.includes('via school')) {
+      const dg=document.createElement('div'); dg.className='cdog'; dg.textContent='🐕 Hazel too'; bot.appendChild(dg);
+    }
+    cell.appendChild(bot);
+
+    cell.onclick = () => {
+      const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
+      document.getElementById('dp-title').textContent = date.toLocaleDateString('en-US',opts);
+      document.getElementById('dp-body').innerHTML = d.detail||'';
+      document.getElementById('dp').classList.add('open');
+    };
+    grid.appendChild(cell);
+  }
+}
+
+function cm(dir) {
+  curMonth += dir;
+  if (curMonth < 0)  { curMonth=11; curYear--; }
+  if (curMonth > 11) { curMonth=0;  curYear++; }
+  renderCal();
+}
+
+function showTab(name,el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+// INIT
+curYear  = today.getFullYear();
+curMonth = today.getMonth();
+if (curYear < 2025 || (curYear===2025 && curMonth<7)) { curYear=2025; curMonth=7; }
+renderCal();
+
+// ── CHANGE LOG ───────────────────────────────────────────
+let changeLog = [];
+
+function logChange() {
+  const desc = document.getElementById('cl-desc').value.trim();
+  const date = document.getElementById('cl-date').value;
+  const file = document.getElementById('cl-file').files[0];
+
+  if (!desc) { showToast('Please describe the schedule change.'); return; }
+  if (!date) { showToast('Please enter the date signed.'); return; }
+
+  const entry = {
+    id: Date.now(),
+    desc,
+    dateSigned: date,
+    fileName: file ? file.name : null,
+    fileUrl: null,
+    loggedAt: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+  };
+
+  // If file attached, create a local object URL for download in this session
+  if (file) {
+    entry.fileUrl = URL.createObjectURL(file);
+  }
+
+  changeLog.unshift(entry);
+  renderChangeLog();
+
+  document.getElementById('cl-desc').value = '';
+  document.getElementById('cl-date').value = '';
+  document.getElementById('cl-file').value = '';
+  showToast('✅ Agreement logged.');
+}
+
+function renderChangeLog() {
+  const list = document.getElementById('cl-list');
+  if (!changeLog.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:.76rem;padding:18px;font-style:italic">No signed agreements uploaded yet</div>';
+    return;
+  }
+  list.innerHTML = changeLog.map(e => `
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div style="font-size:.82rem;font-weight:600;color:var(--text);flex:1;margin-right:10px">${e.desc}</div>
+        <div style="font-size:.68rem;color:var(--muted);white-space:nowrap">Logged ${e.loggedAt}</div>
+      </div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px">Signed: <strong style="color:var(--text)">${e.dateSigned}</strong></div>
+      ${e.fileUrl
+        ? `<a href="${e.fileUrl}" download="${e.fileName}" style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;color:#0284c7;text-decoration:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:4px 10px">
+            📎 ${e.fileName}
+           </a>`
+        : `<span style="font-size:.7rem;color:var(--muted);font-style:italic">No document attached</span>`
+      }
+    </div>`).join('');
+}
+
+// ── REIMBURSEMENTS ───────────────────────────────────────
+let rUser = 'shane';
+let expenses = [];
+
+function rSelUser(u) {
+  rUser = u;
+  document.getElementById('rbtn-s').className = 'who-btn' + (u==='shane' ? ' sa' : '');
+  document.getElementById('rbtn-k').className = 'who-btn' + (u==='kuan'  ? ' ka' : '');
+}
+
+function submitExpense() {
+  const cat      = document.getElementById('r-cat').value;
+  const desc     = document.getElementById('r-desc').value.trim();
+  const total    = parseFloat(document.getElementById('r-total').value);
+  const req      = parseFloat(document.getElementById('r-req').value);
+  const datePaid = document.getElementById('r-date').value;
+  const notes    = document.getElementById('r-notes').value.trim();
+  const emergency= document.getElementById('r-emergency').checked;
+  const agreed   = document.getElementById('r-agreed').checked;
+
+  if (!desc)                      { showToast('Please enter a description.'); return; }
+  if (isNaN(total) || total <= 0) { showToast('Please enter the total amount paid.'); return; }
+  if (isNaN(req)   || req <= 0)   { showToast('Please enter the amount you are requesting.'); return; }
+  if (!datePaid)                  { showToast('Please enter the date paid.'); return; }
+
+  const paidDate  = new Date(datePaid);
+  const todayDate = new Date();
+  const daysSince = Math.floor((todayDate - paidDate) / (1000*60*60*24));
+
+  const exp = {
+    id: Date.now(), from: rUser,
+    cat, desc, total, req, datePaid, notes, emergency, agreed,
+    submitted: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    submittedTs: Date.now(),
+    daysSincePaid: daysSince,
+    status: 'pending',
+    disputeReason: '', counterAmount: null, resolvedDate: null,
+  };
+
+  expenses.unshift(exp);
+  renderLedger();
+
+  ['r-desc','r-total','r-req','r-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('r-emergency').checked = false;
+  document.getElementById('r-agreed').checked = false;
+
+  const other = rUser === 'shane' ? 'Kuan-Yu' : 'Shane';
+  const lateWarn = daysSince > 10 ? ' ⚠️ Paid date is over 10 days ago — may be disputed as a late submission.' : '';
+  showToast('✅ Submitted. ' + other + ' notified.' + lateWarn);
+}
+
+const CAT_LABELS = {
+  medical:'Child Medical', dental:'Child Dental',
+  extracurricular:'Extracurricular', childcare:'Childcare',
+  tuition:'School / Tuition', vet:'Hazel Vet', other:'Other'
+};
+
+function renderLedger() {
+  const list = document.getElementById('expense-list');
+  if (!expenses.length) {
+    list.innerHTML = '<div class="empty-ledger">No expenses submitted yet</div>';
+    updateTotals(); return;
+  }
+  list.innerHTML = expenses.map(e => {
+    const todayD = new Date();
+    const subD   = new Date(e.submittedTs);
+    const daysSub = Math.floor((todayD - subD) / (1000*60*60*24));
+    const daysLeft = 30 - daysSub;
+    const overdue  = e.status === 'pending' && daysLeft < 0;
+    const isLate   = e.daysSincePaid > 10;
+    const fromNm   = e.from === 'shane' ? 'Shane' : 'Kuan-Yu';
+    const toNm     = e.from === 'shane' ? 'Kuan-Yu' : 'Shane';
+    const pct      = Math.min(100, Math.max(0, (daysSub/30)*100));
+    const barClr   = pct < 50 ? '#16a34a' : pct < 80 ? '#d97706' : '#dc2626';
+
+    const sBadge = {
+      pending: overdue ? `<span class="ebadge eb-overdue">⚠ OVERDUE</span>` : `<span class="ebadge eb-pending">Pending</span>`,
+      paid:    `<span class="ebadge eb-paid">✓ Paid</span>`,
+      disputed:`<span class="ebadge eb-disputed">Disputed</span>`,
+      partial: `<span class="ebadge eb-disputed">Partial Dispute</span>`
+    }[e.status] || '';
+
+    const flags = [
+      e.emergency ? `<span class="ebadge eb-emergency">Emergency</span>` : '',
+      e.agreed    ? `<span class="ebadge eb-agreed">Pre-agreed</span>` : '',
+      isLate      ? `<span class="ebadge eb-overdue">Late submission</span>` : '',
+    ].filter(Boolean).join('');
+
+    const actions = e.status === 'pending' ? `
+      <div class="exp-actions" style="margin-top:7px">
+        <button class="ea-btn ea-pay" onclick="togglePayForm(${e.id})">💸 Log Payment</button>
+        <button class="ea-btn ea-partial" onclick="toggleDForm(${e.id})">Partial / Dispute</button>
+        <button class="ea-btn ea-dispute" onclick="resolveExp(${e.id},'disputed')">Dispute</button>
+      </div>
+      <div class="dispute-form" id="pf-${e.id}" style="background:#f0fdf4;border-color:#86efac">
+        <div style="font-size:.72rem;font-weight:700;color:#065f46;margin-bottom:8px">Log Payment Sent</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+          <div>
+            <label style="font-size:.64rem;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:2px">Method</label>
+            <select id="pm-${e.id}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.76rem;font-family:'DM Sans',sans-serif">
+              <option value="Zelle">Zelle</option>
+              <option value="Venmo">Venmo</option>
+              <option value="Cash">Cash</option>
+              <option value="Check">Check</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:.64rem;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:2px">Date Sent</label>
+            <input type="date" id="pd-${e.id}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.76rem">
+          </div>
+        </div>
+        <div style="margin-bottom:6px">
+          <label style="font-size:.64rem;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:2px">Transaction ID / Confirmation # (optional)</label>
+          <input type="text" id="pt-${e.id}" placeholder="e.g. Zelle ref #12345" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.76rem">
+        </div>
+        <button class="ea-btn ea-pay" style="width:100%;padding:7px" onclick="logPayment(${e.id})">✓ Confirm — Mark as Paid</button>
+      </div>
+      <div class="dispute-form" id="df-${e.id}">
+        <div class="fg" style="margin-bottom:7px">
+          <label>Reason for dispute or partial payment</label>
+          <textarea id="dr-${e.id}" placeholder="e.g. No prior agreement, expense not covered, submitted late…" style="min-height:45px"></textarea>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="dc-${e.id}" placeholder="Counter $" min="0" step="0.01" style="width:100px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem">
+          <button class="ea-btn ea-partial" style="flex:1" onclick="resolveExp(${e.id},'partial')">Submit Partial</button>
+          <button class="ea-btn ea-dispute" style="flex:1" onclick="resolveExp(${e.id},'disputed')">Submit Dispute</button>
+        </div>
+      </div>` : '';
+
+    const dNote = e.disputeReason ? `
+      <div style="font-size:.7rem;color:#dc2626;margin-top:5px;background:#fef2f2;padding:5px 8px;border-radius:5px">
+        <strong>Dispute:</strong> ${e.disputeReason}
+        ${e.counterAmount != null ? ` · Counter offer: $${parseFloat(e.counterAmount).toFixed(2)}` : ''}
+      </div>` : '';
+
+    const payRecord = e.paymentMethod ? `
+      <div style="font-size:.7rem;color:#065f46;margin-top:5px;background:#f0fdf4;padding:5px 8px;border-radius:5px">
+        💸 <strong>Paid via ${e.paymentMethod}</strong> on ${e.paymentDate}
+        ${e.paymentRef ? ` · Ref: ${e.paymentRef}` : ''}
+      </div>` : '';
+
+    const deadline = e.status === 'pending' ? `
+      <div style="font-size:.64rem;color:${overdue?'#dc2626':daysLeft<=7?'#d97706':'var(--muted)'};margin-top:4px">
+        ${overdue ? `⚠ Payment ${Math.abs(daysLeft)} day(s) overdue` : `Payment due in ${daysLeft} day(s)`}
+      </div>
+      <div class="deadline-bar"><div class="deadline-fill" style="width:${pct}%;background:${barClr}"></div></div>` : '';
+
+    return `<div class="exp-row" id="er-${e.id}">
+      <div class="exp-top">
+        <div class="exp-title">${CAT_LABELS[e.cat]||e.cat} — ${e.desc}</div>
+        <div class="exp-amt" style="color:${e.from==='shane'?'var(--kuan)':'var(--shane)'}">$${e.req.toFixed(2)}</div>
+      </div>
+      <div class="exp-meta">${fromNm} submitted · ${toNm} owes · Paid ${e.datePaid} · Submitted ${e.submitted} · Full cost: $${e.total.toFixed(2)}</div>
+      <div class="exp-badges" style="margin:4px 0">${sBadge}${flags}</div>
+      ${e.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-bottom:4px;font-style:italic">${e.notes}</div>` : ''}
+      ${dNote}${payRecord}${deadline}${actions}
+    </div>`;
+  }).join('');
+  updateTotals();
+}
+
+function togglePayForm(id) {
+  const pf = document.getElementById('pf-'+id);
+  if (pf) {
+    pf.classList.toggle('open');
+    // Set today's date as default
+    const pd = document.getElementById('pd-'+id);
+    if (pd && !pd.value) pd.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+function logPayment(id) {
+  const e = expenses.find(x => x.id === id);
+  if (!e) return;
+  const method = (document.getElementById('pm-'+id)||{}).value;
+  const date   = (document.getElementById('pd-'+id)||{}).value;
+  const ref    = (document.getElementById('pt-'+id)||{}).value.trim();
+  if (!date) { showToast('Please enter the payment date.'); return; }
+  e.status        = 'paid';
+  e.paymentMethod = method;
+  e.paymentDate   = date;
+  e.paymentRef    = ref || null;
+  e.resolvedDate  = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  renderLedger();
+  showToast('✅ Payment logged via ' + method + '. Ledger updated.');
+}
+
+function toggleDForm(id) {
+  const df = document.getElementById('df-'+id);
+  if (df) df.classList.toggle('open');
+}
+
+function resolveExp(id, status) {
+  const e = expenses.find(x => x.id === id);
+  if (!e) return;
+  e.status        = status;
+  e.disputeReason = (document.getElementById('dr-'+id)||{}).value || '';
+  const cv        = (document.getElementById('dc-'+id)||{}).value;
+  e.counterAmount = cv ? parseFloat(cv) : null;
+  e.resolvedDate  = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  renderLedger();
+  const msgs = { paid:'✅ Marked as paid — logged.', disputed:'❌ Dispute logged — other party notified.', partial:'⚠️ Partial dispute logged.' };
+  showToast(msgs[status] || 'Updated.');
+}
+
+function updateTotals() {
+  // Shane debits = expenses submitted BY Kuan-Yu (Shane owes her)
+  // Kuan-Yu debits = expenses submitted BY Shane (Kuan-Yu owes him)
+  // Credits = payments logged against those debits
+  let shaneDebits  = 0; // what Shane owes (Kuan-Yu submitted)
+  let kuanDebits   = 0; // what Kuan-Yu owes (Shane submitted)
+  let shaneCredits = 0; // what Shane has paid
+  let kuanCredits  = 0; // what Kuan-Yu has paid
+
+  expenses.forEach(e => {
+    if (e.status === 'disputed') return; // disputed items excluded from ledger
+    const amt = e.counterAmount != null ? parseFloat(e.counterAmount) : e.req;
+
+    if (e.from === 'kuan') {
+      // Kuan-Yu submitted — Shane owes
+      shaneDebits += amt;
+      if (e.status === 'paid') shaneCredits += amt;
+    } else {
+      // Shane submitted — Kuan-Yu owes
+      kuanDebits += amt;
+      if (e.status === 'paid') kuanCredits += amt;
+    }
+  });
+
+  document.getElementById('l-shane-debits').textContent  = '$' + shaneDebits.toFixed(2);
+  document.getElementById('l-shane-credits').textContent = '$' + shaneCredits.toFixed(2);
+  document.getElementById('l-kuan-debits').textContent   = '$' + kuanDebits.toFixed(2);
+  document.getElementById('l-kuan-credits').textContent  = '$' + kuanCredits.toFixed(2);
+
+  // Net: positive = Shane owes, negative = Kuan-Yu owes
+  const shaneNet = shaneDebits - shaneCredits;
+  const kuanNet  = kuanDebits  - kuanCredits;
+  const net      = shaneNet - kuanNet; // net amount Shane owes Kuan-Yu (negative = Kuan-Yu owes Shane)
+
+  const netEl    = document.getElementById('l-net-amount');
+  const labelEl  = document.getElementById('l-net-label');
+  const banner   = document.getElementById('l-net-banner');
+
+  if (Math.abs(net) < 0.01) {
+    netEl.textContent   = '$0.00';
+    netEl.style.color   = '#16a34a';
+    labelEl.textContent = '✓ All settled';
+    banner.style.background = '#f0fdf4';
+  } else if (net > 0) {
+    netEl.textContent   = '$' + net.toFixed(2);
+    netEl.style.color   = 'var(--shane)';
+    labelEl.textContent = 'owed by Shane';
+    banner.style.background = '#dbeafe';
+  } else {
+    netEl.textContent   = '$' + Math.abs(net).toFixed(2);
+    netEl.style.color   = 'var(--kuan)';
+    labelEl.textContent = 'owed by Kuan-Yu';
+    banner.style.background = '#fde8d8';
+  }
+}
+</script>
+</body>
+</html>
